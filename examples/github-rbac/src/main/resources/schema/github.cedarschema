@@ -1,0 +1,315 @@
+// GitHub-style RBAC with Organizations, Teams, and Repositories
+//
+// Demonstrates:
+// - Team-based permissions (not just user-based)
+// - Repository visibility (public/private/internal)
+// - Branch protection rules
+// - Fork relationships
+
+namespace GitHub {
+
+    // ==========================================================================
+    // Principals
+    // ==========================================================================
+
+    entity User = {
+        "login": String,
+        "name": String,
+        "verified": Bool,
+        "twoFactorEnabled": Bool,
+    };
+
+    entity Team in [Organization] = {
+        "name": String,
+        "slug": String,
+        "privacy": String,        // "visible" | "secret"
+        "permission": String,     // Default permission: "pull" | "push" | "admin"
+    };
+
+    // ==========================================================================
+    // Organization Hierarchy
+    // ==========================================================================
+
+    entity Organization = {
+        "login": String,
+        "name": String,
+        "plan": String,           // "free" | "team" | "enterprise"
+        "defaultRepoPermission": String,  // "none" | "read" | "write" | "admin"
+    };
+
+    entity Repository in [Organization] = {
+        "name": String,
+        "visibility": String,     // "public" | "private" | "internal"
+        "archived": Bool,
+        "defaultBranch": String,
+        "allowForking": Bool,
+    };
+
+    // ==========================================================================
+    // Repository Sub-Resources
+    // ==========================================================================
+
+    entity Branch in [Repository] = {
+        "name": String,
+        "protected": Bool,
+        "requirePullRequest": Bool,
+        "requiredReviewers": Long,
+    };
+
+    entity PullRequest in [Repository] = {
+        "number": Long,
+        "title": String,
+        "author": User,
+        "state": String,          // "open" | "closed" | "merged"
+        "draft": Bool,
+        "targetBranch": String,
+    };
+
+    entity Issue in [Repository] = {
+        "number": Long,
+        "title": String,
+        "author": User,
+        "state": String,          // "open" | "closed"
+        "locked": Bool,
+    };
+
+    entity Release in [Repository] = {
+        "tag": String,
+        "name": String,
+        "draft": Bool,
+        "prerelease": Bool,
+        "author": User,
+    };
+
+    // Actions/Workflows
+    entity Workflow in [Repository] = {
+        "name": String,
+        "path": String,
+        "state": String,          // "active" | "disabled"
+    };
+
+    entity WorkflowRun in [Workflow] = {
+        "runNumber": Long,
+        "status": String,
+        "conclusion": String,
+        "actor": User,
+    };
+
+    // ==========================================================================
+    // Organization Actions
+    // ==========================================================================
+
+    action "Organization::view" appliesTo {
+        principal: [User, Team],
+        resource: Organization,
+    };
+
+    action "Organization::update" appliesTo {
+        principal: [User],
+        resource: Organization,
+    };
+
+    action "Organization::manageMembers" appliesTo {
+        principal: [User],
+        resource: Organization,
+    };
+
+    action "Organization::manageTeams" appliesTo {
+        principal: [User],
+        resource: Organization,
+    };
+
+    action "Organization::createRepository" appliesTo {
+        principal: [User, Team],
+        resource: Organization,
+    };
+
+    // ==========================================================================
+    // Repository Actions
+    // ==========================================================================
+
+    action "Repository::view" appliesTo {
+        principal: [User, Team],
+        resource: Repository,
+    };
+
+    action "Repository::clone" appliesTo {
+        principal: [User],
+        resource: Repository,
+    };
+
+    action "Repository::push" appliesTo {
+        principal: [User],
+        resource: Repository,
+    };
+
+    action "Repository::admin" appliesTo {
+        principal: [User, Team],
+        resource: Repository,
+    };
+
+    action "Repository::delete" appliesTo {
+        principal: [User],
+        resource: Repository,
+    };
+
+    action "Repository::fork" appliesTo {
+        principal: [User],
+        resource: Repository,
+    };
+
+    action "Repository::manageSettings" appliesTo {
+        principal: [User, Team],
+        resource: Repository,
+    };
+
+    // ==========================================================================
+    // Branch Actions
+    // ==========================================================================
+
+    action "Branch::view" appliesTo {
+        principal: [User, Team],
+        resource: Branch,
+    };
+
+    action "Branch::push" appliesTo {
+        principal: [User],
+        resource: Branch,
+    };
+
+    action "Branch::delete" appliesTo {
+        principal: [User],
+        resource: Branch,
+    };
+
+    action "Branch::protect" appliesTo {
+        principal: [User, Team],
+        resource: Branch,
+    };
+
+    // ==========================================================================
+    // Pull Request Actions
+    // ==========================================================================
+
+    action "PullRequest::view" appliesTo {
+        principal: [User, Team],
+        resource: PullRequest,
+    };
+
+    action "PullRequest::create" appliesTo {
+        principal: [User],
+        resource: Repository,
+    };
+
+    action "PullRequest::update" appliesTo {
+        principal: [User],
+        resource: PullRequest,
+    };
+
+    action "PullRequest::merge" appliesTo {
+        principal: [User, Team],
+        resource: PullRequest,
+    };
+
+    action "PullRequest::review" appliesTo {
+        principal: [User, Team],
+        resource: PullRequest,
+    };
+
+    action "PullRequest::close" appliesTo {
+        principal: [User, Team],
+        resource: PullRequest,
+    };
+
+    // ==========================================================================
+    // Issue Actions
+    // ==========================================================================
+
+    action "Issue::view" appliesTo {
+        principal: [User, Team],
+        resource: Issue,
+    };
+
+    action "Issue::create" appliesTo {
+        principal: [User],
+        resource: Repository,
+    };
+
+    action "Issue::update" appliesTo {
+        principal: [User, Team],
+        resource: Issue,
+    };
+
+    action "Issue::close" appliesTo {
+        principal: [User, Team],
+        resource: Issue,
+    };
+
+    action "Issue::lock" appliesTo {
+        principal: [User, Team],
+        resource: Issue,
+    };
+
+    // ==========================================================================
+    // Release Actions
+    // ==========================================================================
+
+    action "Release::view" appliesTo {
+        principal: [User, Team],
+        resource: Release,
+    };
+
+    action "Release::create" appliesTo {
+        principal: [User, Team],
+        resource: Repository,
+    };
+
+    action "Release::update" appliesTo {
+        principal: [User, Team],
+        resource: Release,
+    };
+
+    action "Release::delete" appliesTo {
+        principal: [User, Team],
+        resource: Release,
+    };
+
+    action "Release::publish" appliesTo {
+        principal: [User, Team],
+        resource: Release,
+    };
+
+    // ==========================================================================
+    // Workflow Actions
+    // ==========================================================================
+
+    action "Workflow::view" appliesTo {
+        principal: [User, Team],
+        resource: Workflow,
+    };
+
+    action "Workflow::enable" appliesTo {
+        principal: [User, Team],
+        resource: Workflow,
+    };
+
+    action "Workflow::disable" appliesTo {
+        principal: [User, Team],
+        resource: Workflow,
+    };
+
+    action "WorkflowRun::view" appliesTo {
+        principal: [User, Team],
+        resource: WorkflowRun,
+    };
+
+    action "WorkflowRun::cancel" appliesTo {
+        principal: [User, Team],
+        resource: WorkflowRun,
+    };
+
+    action "WorkflowRun::rerun" appliesTo {
+        principal: [User, Team],
+        resource: WorkflowRun,
+    };
+}

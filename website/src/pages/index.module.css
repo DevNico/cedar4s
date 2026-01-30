@@ -1,0 +1,121 @@
+.heroBanner {
+  padding: 4rem 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 2rem;
+  }
+}
+
+.earlyStage {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+  display: inline-block;
+}
+
+.earlyStage a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.heroLogo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 20px;
+  padding-bottom: 10px;
+}
+
+.logoImage {
+  width: 80px;
+  height: 80px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  padding: 8px;
+}
+
+.heroTitle {
+  text-align: start;
+  padding-bottom: 0;
+  margin-bottom: 0;
+  padding-left: 20px;
+  font-size: 3rem;
+}
+
+.heroSubtitle {
+  text-align: center;
+  padding-top: 0;
+  margin-top: 0;
+  font-size: 1.5rem;
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.features {
+  padding: 2rem 0;
+  width: 100%;
+}
+
+.doubleGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 3rem;
+  align-items: start;
+}
+
+@media screen and (max-width: 996px) {
+  .doubleGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.doubleGrid h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.doubleGrid p {
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.codeExample {
+  font-size: 0.85rem;
+}
+
+.codeTitle {
+  background: var(--ifm-color-emphasis-200);
+  padding: 0.5rem 1rem;
+  border-radius: 8px 8px 0 0;
+  font-weight: 500;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.codeBlock {
+  margin: 0;
+  padding: 1rem;
+  background: var(--ifm-color-emphasis-100);
+  border-radius: 0 0 8px 8px;
+  overflow-x: auto;
+}
+
+.codeBlock code {
+  background: none;
+  padding: 0;
+}

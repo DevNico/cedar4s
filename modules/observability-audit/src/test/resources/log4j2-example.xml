@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Example Log4j2 configuration for Cedar audit logging.
+
+  This demonstrates how to use cedar4s audit logging with Log4j2 instead of Logback.
+  Log4j2 provides similar features with different configuration syntax.
+
+  To use Log4j2, add these dependencies instead of Logback:
+    "org.apache.logging.log4j" % "log4j-api" % "2.24.3"
+    "org.apache.logging.log4j" % "log4j-core" % "2.24.3"
+    "org.apache.logging.log4j" % "log4j-slf4j2-impl" % "2.24.3"
+
+  Copy and customize this file for your environment.
+-->
+<Configuration status="WARN">
+  <Appenders>
+    <!-- JSON rolling file appender for audit logs -->
+    <RollingFile name="AuditJson"
+                 fileName="/var/log/cedar/audit.json"
+                 filePattern="/var/log/cedar/audit-%d{yyyy-MM-dd}-%i.json.gz">
+      <JsonTemplateLayout eventTemplateUri="classpath:EcsLayout.json"/>
+      <Policies>
+        <TimeBasedTriggeringPolicy/>
+        <SizeBasedTriggeringPolicy size="100 MB"/>
+      </Policies>
+      <DefaultRolloverStrategy max="90">
+        <Delete basePath="/var/log/cedar" maxDepth="1">
+          <IfFileName glob="audit-*.json.gz"/>
+          <IfLastModified age="90d"/>
+        </Delete>
+      </DefaultRolloverStrategy>
+    </RollingFile>
+
+    <!-- Async appender for performance -->
+    <Async name="AsyncAudit">
+      <AppenderRef ref="AuditJson"/>
+    </Async>
+
+    <!-- Console appender -->
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{ISO8601} %-5level [%t] %logger{36} - %msg%n"/>
+    </Console>
+  </Appenders>
+
+  <Loggers>
+    <!-- Cedar audit logger -->
+    <Logger name="cedar4s.audit" level="info" additivity="false">
+      <AppenderRef ref="AsyncAudit"/>
+    </Logger>
+
+    <!-- Root logger -->
+    <Root level="warn">
+      <AppenderRef ref="Console"/>
+    </Root>
+  </Loggers>
+</Configuration>

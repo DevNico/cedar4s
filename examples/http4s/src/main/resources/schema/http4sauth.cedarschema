@@ -1,0 +1,14 @@
+namespace Http4sAuth {
+
+    entity User = {};
+
+    entity Document = {
+        "title": String,
+        "owner": User,
+    };
+
+    action "Document::Read" appliesTo {
+        principal: [User],
+        resource: Document,
+    };
+}

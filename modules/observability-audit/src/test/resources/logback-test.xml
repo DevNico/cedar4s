@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <!-- Console appender for general test output -->
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <!-- JSON file appender for audit logs (using logstash encoder) -->
+  <appender name="AUDIT_JSON" class="ch.qos.logback.core.FileAppender">
+    <file>target/test-audit.json</file>
+    <append>false</append>
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <!-- Include caller data for debugging -->
+      <includeCallerData>false</includeCallerData>
+      <!-- Pretty print for readability in tests -->
+      <prettyPrint>true</prettyPrint>
+    </encoder>
+  </appender>
+
+  <!-- Plain text file appender for audit logs (fallback) -->
+  <appender name="AUDIT_TEXT" class="ch.qos.logback.core.FileAppender">
+    <file>target/test-audit.log</file>
+    <append>false</append>
+    <encoder>
+      <pattern>%d{ISO8601} %-5level [%thread] %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <!-- Rotating file appender example for production use -->
+  <appender name="AUDIT_ROLLING" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>target/audit-rolling.json</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+      <!-- Daily rollover with size limit -->
+      <fileNamePattern>target/audit-rolling.%d{yyyy-MM-dd}.%i.json.gz</fileNamePattern>
+      <!-- Each file should be at most 10MB, keep 30 days worth of history, but max 1GB total -->
+      <maxFileSize>10MB</maxFileSize>
+      <maxHistory>30</maxHistory>
+      <totalSizeCap>1GB</totalSizeCap>
+    </rollingPolicy>
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+  </appender>
+
+  <!-- Cedar audit logger - JSON structured logging -->
+  <logger name="cedar4s.audit" level="INFO" additivity="false">
+    <appender-ref ref="AUDIT_JSON"/>
+  </logger>
+
+  <!-- Alternative: plain text audit logger -->
+  <logger name="cedar4s.audit.text" level="INFO" additivity="false">
+    <appender-ref ref="AUDIT_TEXT"/>
+  </logger>
+
+  <!-- Root logger -->
+  <root level="INFO">
+    <appender-ref ref="STDOUT"/>
+  </root>
+
+</configuration>

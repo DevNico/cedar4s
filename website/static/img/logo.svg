@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <style>
+      .outline { fill: none; stroke: #5C564F; stroke-width: 14; stroke-linecap: round; stroke-linejoin: round; }
+      .wood-fill { fill: #988B7E; }
+      .wood-shadow { fill: #5C564F; }
+      .metal-fill { fill: #EEE7E0; }
+      .metal-outline { fill: none; stroke: #5C564F; stroke-width: 14; stroke-linecap: round; stroke-linejoin: round; }
+      .scala-red { fill: #F43825; }
+      .scala-shadow { fill: #912B22; }
+    </style>
+  </defs>
+
+  <title>Cedar4s Logo</title>
+
+  <g transform="translate(256, 256) rotate(-30) translate(-256, -256)">
+    
+    <!-- Wood handle shadow -->
+    <path class="wood-shadow" d="M 215 85 L 297 85 L 297 460 C 297 480 279 498 256 498 C 233 498 215 480 215 460 Z" />
+    
+    <!-- Wood handle -->
+    <path class="wood-fill" d="M 220 80 L 292 80 L 292 455 C 292 473 276 490 256 490 C 236 490 220 473 220 455 Z" />
+    <path class="outline" d="M 220 80 L 292 80 L 292 455 C 292 473 276 490 256 490 C 236 490 220 473 220 455 Z" />
+
+    <!-- Axe head metal fill -->
+    <path class="metal-fill" d="M 220 100 L 130 100 C 90 100 65 140 65 200 C 65 260 110 275 160 235 L 220 175 L 220 100 Z" />
+    <rect x="220" y="100" width="72" height="75" class="metal-fill" />
+    <path class="metal-fill" d="M 292 100 L 340 100 C 355 100 368 113 368 128 L 368 147 C 368 162 355 175 340 175 L 292 175 Z" />
+    
+    <!-- Axe head outline -->
+    <path class="metal-outline" d="M 292 175 L 340 175 C 355 175 368 162 368 147 L 368 128 C 368 113 355 100 340 100 L 220 100 L 130 100 C 90 100 65 140 65 200 C 65 260 110 275 160 235 L 220 175 L 292 175" />
+
+    <!-- Scala stripe 1 shadow -->
+    <path class="scala-shadow" d="M 212 275 C 212 275 220 272 260 262 C 300 252 308 250 308 250 L 308 252 C 308 265 300 280 260 290 C 220 300 212 303 212 303 C 212 303 212 288 212 275 Z" />
+    
+    <!-- Scala stripe 1 -->
+    <path class="scala-red" d="M 207 268 C 207 268 215 265 255 255 C 295 245 303 243 303 243 L 303 245 C 303 258 295 273 255 283 C 215 293 207 296 207 296 C 207 296 207 281 207 268 Z" />
+
+    <!-- Scala stripe 2 shadow -->
+    <path class="scala-shadow" d="M 212 335 C 212 335 220 332 260 322 C 300 312 308 310 308 310 L 308 312 C 308 325 300 340 260 350 C 220 360 212 363 212 363 C 212 363 212 348 212 335 Z" />
+    
+    <!-- Scala stripe 2 -->
+    <path class="scala-red" d="M 207 328 C 207 328 215 325 255 315 C 295 305 303 303 303 303 L 303 305 C 303 318 295 333 255 343 C 215 353 207 356 207 356 C 207 356 207 341 207 328 Z" />
+
+    <!-- Scala stripe 3 shadow -->
+    <path class="scala-shadow" d="M 212 395 C 212 395 220 392 260 382 C 300 372 308 370 308 370 L 308 372 C 308 385 300 400 260 410 C 220 420 212 423 212 423 C 212 423 212 408 212 395 Z" />
+    
+    <!-- Scala stripe 3 -->
+    <path class="scala-red" d="M 207 388 C 207 388 215 385 255 375 C 295 365 303 363 303 363 L 303 365 C 303 378 295 393 255 403 C 215 413 207 416 207 416 C 207 416 207 401 207 388 Z" />
+
+  </g>
+</svg>

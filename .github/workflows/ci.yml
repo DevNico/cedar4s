@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  format-check:
+    name: Check Formatting
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: coursier/setup-action@v2
+        with:
+          apps: scalafmt
+
+      - name: Check formatting
+        run: scalafmt --check
+
+  test:
+    name: Test (Scala ${{ matrix.scala }} - Java ${{ matrix.java }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        java: ["11", "17", "21", "25"]
+        scala: ["2.13.16", "3.7.0"]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: coursier/cache-action@v7
+
+      - uses: coursier/setup-action@v2
+        with:
+          jvm: temurin:${{ matrix.java }}
+          apps: sbt
+
+      - name: Compile
+        run: sbt ++${{ matrix.scala }} compile
+
+      - name: Run tests
+        run: sbt ++${{ matrix.scala }} test
+
+  sbt-plugin:
+    name: SBT Plugin
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: coursier/cache-action@v7
+
+      - uses: coursier/setup-action@v2
+        with:
+          jvm: temurin:21
+          apps: sbt
+
+      - name: Compile SBT plugin
+        run: sbt "++2.12.20; sbt-cedar4s/compile"
+
+  docs:
+    name: Check Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: website
+
+      - name: Build documentation
+        run: npm run build
+        working-directory: website

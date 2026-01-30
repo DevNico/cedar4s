@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Example production Logback configuration for Cedar audit logging.
+
+  This configuration demonstrates best practices for production deployments:
+  - Separate audit logs from application logs
+  - JSON structured logging for machine parsing
+  - File rotation to prevent disk exhaustion
+  - Async appenders for performance
+  - Appropriate log levels
+
+  Copy and customize this file for your production environment.
+-->
+<configuration>
+
+  <!-- Async appender for high-performance logging -->
+  <appender name="ASYNC_AUDIT" class="ch.qos.logback.classic.AsyncAppender">
+    <!-- Don't block on full queue - drop events instead -->
+    <neverBlock>true</neverBlock>
+    <!-- Large queue for burst handling -->
+    <queueSize>1024</queueSize>
+    <!-- Don't discard audit events -->
+    <discardingThreshold>0</discardingThreshold>
+    <appender-ref ref="AUDIT_FILE"/>
+  </appender>
+
+  <!-- Rotating JSON file appender for audit logs -->
+  <appender name="AUDIT_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>/var/log/cedar/audit.json</file>
+
+    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+      <!-- Daily rollover with size-based rotation -->
+      <fileNamePattern>/var/log/cedar/audit-%d{yyyy-MM-dd}.%i.json.gz</fileNamePattern>
+      <!-- Max 100MB per file -->
+      <maxFileSize>100MB</maxFileSize>
+      <!-- Keep 90 days of audit logs (compliance requirement) -->
+      <maxHistory>90</maxHistory>
+      <!-- Max 50GB total (adjust based on volume) -->
+      <totalSizeCap>50GB</totalSizeCap>
+    </rollingPolicy>
+
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <!-- Compact JSON for production -->
+      <prettyPrint>false</prettyPrint>
+      <!-- Include timestamp in ISO-8601 format -->
+      <timestampPattern>yyyy-MM-dd'T'HH:mm:ss.SSSX</timestampPattern>
+      <!-- Add service metadata -->
+      <customFields>{"service":"cedar-authz","environment":"production"}</customFields>
+    </encoder>
+  </appender>
+
+  <!-- Separate appender for denied access (high priority) -->
+  <appender name="DENIED_ACCESS" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>/var/log/cedar/denied.json</file>
+    <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
+      <evaluator>
+        <expression>marker != null &amp;&amp; marker.contains("DENIED")</expression>
+      </evaluator>
+      <onMatch>ACCEPT</onMatch>
+      <onMismatch>DENY</onMismatch>
+    </filter>
+
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <fileNamePattern>/var/log/cedar/denied-%d{yyyy-MM-dd}.json.gz</fileNamePattern>
+      <maxHistory>90</maxHistory>
+    </rollingPolicy>
+
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+  </appender>
+
+  <!-- Cedar audit logger -->
+  <logger name="cedar4s.audit" level="INFO" additivity="false">
+    <appender-ref ref="ASYNC_AUDIT"/>
+  </logger>
+
+  <!-- Root logger for application logs -->
+  <root level="WARN">
+    <appender-ref ref="STDOUT"/>
+  </root>
+
+  <!-- Console appender (optional for production) -->
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <prettyPrint>false</prettyPrint>
+    </encoder>
+  </appender>
+
+</configuration>

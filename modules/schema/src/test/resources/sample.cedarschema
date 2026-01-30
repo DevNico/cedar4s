@@ -1,0 +1,136 @@
+// Sample Cedar Schema for testing
+// Demonstrates common patterns: multi-tenant hierarchy, roles, actions
+
+namespace SampleApp {
+
+  // ===========================================================================
+  // ROOT ENTITIES (no parents)
+  // ===========================================================================
+
+  // Tenant (organization) - root of ownership hierarchy
+  entity Tenant = {
+    "name": String,
+  };
+
+  // Role - defines permission sets
+  entity Role = {
+    "name": String,
+    "scope": String,  // "global" | "tenant"
+  };
+
+  // User - authenticated user
+  entity User = {
+    "email": String,
+  };
+
+  // ===========================================================================
+  // TENANT-SCOPED ENTITIES
+  // ===========================================================================
+
+  // TenantMembership - junction entity for User-Tenant-Role relationship
+  entity TenantMembership in [Tenant] = {
+    "roles": Set<Role>,
+    "tenant": Tenant,
+  };
+
+  // Project - belongs to a tenant
+  entity Project in [Tenant] = {
+    "name": String,
+    "archived": Bool,
+  };
+
+  // Task - belongs to a project and tenant (multi-parent for authorization)
+  entity Task in [Project, Tenant] = {
+    "title": String,
+    "status": String,
+    "archived": Bool,
+  };
+
+  // Document - belongs to a task
+  entity Document in [Task] = {
+    "name": String,
+    "version": Long,
+  };
+
+  // ===========================================================================
+  // PROJECT ACTIONS
+  // ===========================================================================
+
+  action "Project::list" appliesTo {
+    principal: [User, TenantMembership],
+    resource: [Tenant],
+  };
+
+  action "Project::create" appliesTo {
+    principal: [User, TenantMembership],
+    resource: [Tenant],
+  };
+
+  action "Project::read" appliesTo {
+    principal: [User, TenantMembership],
+    resource: [Project],
+  };
+
+  action "Project::update" appliesTo {
+    principal: [User, TenantMembership],
+    resource: [Project],
+  };
+
+  action "Project::delete" appliesTo {
+    principal: [User, TenantMembership],
+    resource: [Project],
+  };
+
+  // ===========================================================================
+  // TASK ACTIONS
+  // ===========================================================================
+
+  action "Task::list" appliesTo {
+    principal: [User, TenantMembership],
+    resource: [Project],
+  };
+
+  action "Task::create" appliesTo {
+    principal: [User, TenantMembership],
+    resource: [Project],
+  };
+
+  action "Task::read" appliesTo {
+    principal: [User, TenantMembership],
+    resource: [Task],
+  };
+
+  action "Task::update" appliesTo {
+    principal: [User, TenantMembership],
+    resource: [Task],
+  };
+
+  action "Task::delete" appliesTo {
+    principal: [User, TenantMembership],
+    resource: [Task],
+  };
+
+  // ===========================================================================
+  // DOCUMENT ACTIONS
+  // ===========================================================================
+
+  action "Document::list" appliesTo {
+    principal: [User, TenantMembership],
+    resource: [Task],
+  };
+
+  action "Document::upload" appliesTo {
+    principal: [User, TenantMembership],
+    resource: [Task],
+  };
+
+  action "Document::read" appliesTo {
+    principal: [User, TenantMembership],
+    resource: [Document],
+  };
+
+  action "Document::delete" appliesTo {
+    principal: [User, TenantMembership],
+    resource: [Document],
+  };
+}

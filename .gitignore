@@ -1,0 +1,38 @@
+# Build artifacts
+target/
+project/target/
+project/project/
+
+# IDE
+.idea/
+.bsp/
+.metals/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# SBT
+.sbt/
+.ivy2/
+.cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local configuration
+.sbtopts
+.envrc
+
+# Test output
+test-output/
+
+# Docusaurus
+website/build
+website/.docusaurus
+website/node_modules
+website/.cache

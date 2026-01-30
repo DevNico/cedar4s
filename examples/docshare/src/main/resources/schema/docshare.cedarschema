@@ -1,0 +1,129 @@
+// Document Sharing with Relationship-Based Access Control (ReBAC)
+//
+// Demonstrates: owner/editor/viewer relationships, group-based sharing,
+// hierarchical containment (folders → documents → comments)
+
+namespace DocShare {
+
+    // ==========================================================================
+    // Principals
+    // ==========================================================================
+
+    entity User = {
+        "email": String,
+        "name": String,
+    };
+
+    entity Group = {
+        "name": String,
+        "members": Set<User>,
+    };
+
+    // ==========================================================================
+    // Resources (Hierarchical)
+    // ==========================================================================
+
+    // Root resource - no parent
+    entity Folder = {
+        "name": String,
+        "owner": User,
+        "editors": Set<User>,
+        "viewers": Set<User>,
+        "viewerGroups": Set<Group>,
+    };
+
+    // Document belongs to a Folder
+    entity Document in [Folder] = {
+        "name": String,
+        "owner": User,
+        "editors": Set<User>,
+        "viewers": Set<User>,
+        "locked": Bool,
+    };
+
+    // Comment belongs to a Document
+    entity Comment in [Document] = {
+        "author": User,
+        "text": String,
+    };
+
+    // ==========================================================================
+    // Folder Actions
+    // ==========================================================================
+
+    action "Folder::view" appliesTo {
+        principal: [User, Group],
+        resource: Folder,
+    };
+
+    action "Folder::edit" appliesTo {
+        principal: [User, Group],
+        resource: Folder,
+    };
+
+    action "Folder::delete" appliesTo {
+        principal: [User],
+        resource: Folder,
+    };
+
+    action "Folder::share" appliesTo {
+        principal: [User],
+        resource: Folder,
+    };
+
+    // ==========================================================================
+    // Document Actions
+    // ==========================================================================
+
+    action "Document::view" appliesTo {
+        principal: [User, Group],
+        resource: Document,
+        context: {
+            "requestTime": Long,
+            "sourceIP"?: String,
+        },
+    };
+
+    action "Document::edit" appliesTo {
+        principal: [User, Group],
+        resource: Document,
+        context: {
+            "requestTime": Long,
+            "reason"?: String,
+        },
+    };
+
+    action "Document::delete" appliesTo {
+        principal: [User],
+        resource: Document,
+    };
+
+    action "Document::share" appliesTo {
+        principal: [User],
+        resource: Document,
+    };
+
+    action "Document::comment" appliesTo {
+        principal: [User, Group],
+        resource: Document,
+    };
+
+    // ==========================================================================
+    // Comment Actions
+    // ==========================================================================
+
+    action "Comment::view" appliesTo {
+        principal: [User, Group],
+        resource: Comment,
+    };
+
+    action "Comment::edit" appliesTo {
+        principal: [User],
+        resource: Comment,
+    };
+
+    action "Comment::delete" appliesTo {
+        principal: [User],
+        resource: Comment,
+    };
+}

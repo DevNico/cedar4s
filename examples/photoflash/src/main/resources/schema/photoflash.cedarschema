@@ -1,0 +1,78 @@
+// PhotoFlash - Advanced Cedar Features Demo
+//
+// Demonstrates:
+// - Multiple parent types (Album in [Account, AlbumFolder])
+// - Entity references in attributes (Account with Set<User>)
+// - Context with nested records (photo metadata)
+// - Hierarchical relationships
+
+namespace PhotoFlash {
+
+    // ==========================================================================
+    // Principals
+    // ==========================================================================
+
+    entity User in UserGroup = {
+        "department": String,
+        "jobLevel": Long,
+    };
+
+    entity UserGroup;
+
+    // ==========================================================================
+    // Resources
+    // ==========================================================================
+
+    // Account is the root resource
+    entity Account = {
+        "admins"?: Set<User>,
+        "owner": User,
+    };
+
+    // AlbumFolder can contain albums (allows nesting without recursion)
+    entity AlbumFolder in Account = {
+        "name": String,
+    };
+
+    // Albums can belong to Account or AlbumFolder (multiple parent types)
+    entity Album in [Account, AlbumFolder] = {
+        "account": Account,
+        "private": Bool,
+    };
+
+    // Photos belong to albums
+    entity Photo in Album = {
+        "account": Account,
+        "private": Bool,
+    };
+
+    // ==========================================================================
+    // Actions
+    // ==========================================================================
+
+    action "Album::UploadPhoto" appliesTo {
+        principal: [User],
+        resource: Album,
+        context: {
+            "authenticated": Bool,
+            "photo_file_size": Long,
+            "photo_file_type": String,
+        }
+    };
+
+    action "Photo::View" appliesTo {
+        principal: [User],
+        resource: Photo,
+        context: {
+            "authenticated": Bool,
+        }
+    };
+
+    action "Account::ListAlbums" appliesTo {
+        principal: [User],
+        resource: Account,
+        context: {
+            "authenticated": Bool,
+        }
+    };
+}

@@ -1,0 +1,274 @@
+// Multi-Tenant SaaS Platform
+//
+// Demonstrates:
+// - Strict tenant isolation (cross-tenant access prevention)
+// - Organization -> Workspace -> Project -> Resource hierarchy
+// - Role-based access within tenants via permission sets
+// - Service accounts and API keys
+
+namespace SaaS {
+
+    // ==========================================================================
+    // Principal Types
+    // ==========================================================================
+
+    entity User = {
+        "email": String,
+        "name": String,
+        "emailVerified": Bool,
+    };
+
+    entity ServiceAccount in [Organization] = {
+        "name": String,
+        "description": String,
+        "scopes": Set<String>,
+    };
+
+    entity ApiKey in [ServiceAccount] = {
+        "name": String,
+        "scopes": Set<String>,
+        "expiresAt": Long,
+    };
+
+    // ==========================================================================
+    // Tenant Hierarchy (Organization -> Workspace -> Project)
+    // With embedded permission sets for role-based access
+    // ==========================================================================
+
+    // Root tenant entity - all resources belong to an organization
+    entity Organization = {
+        "name": String,
+        "plan": String,           // "free" | "pro" | "enterprise"
+        "maxWorkspaces": Long,
+        "maxMembers": Long,
+        // Permission sets
+        "owners": Set<User>,
+        "admins": Set<User>,
+        "members": Set<User>,
+        "billingUsers": Set<User>,
+    };
+
+    // Workspace within an organization
+    entity Workspace in [Organization] = {
+        "name": String,
+        "description": String,
+        // Permission sets (often computed from org membership + explicit grants)
+        "admins": Set<User>,
+        "members": Set<User>,
+        "viewers": Set<User>,
+    };
+
+    // Project within a workspace
+    entity Project in [Workspace] = {
+        "name": String,
+        "visibility": String,     // "private" | "internal" | "public"
+        "archived": Bool,
+        // Permission sets
+        "admins": Set<User>,
+        "maintainers": Set<User>,
+        "developers": Set<User>,
+        "viewers": Set<User>,
+    };
+
+    // ==========================================================================
+    // Resources within Projects
+    // ==========================================================================
+
+    entity Environment in [Project] = {
+        "name": String,           // "development" | "staging" | "production"
+        "isProtected": Bool,
+        // Permission sets (often inherited from project)
+        "admins": Set<User>,
+        "members": Set<User>,
+        "viewers": Set<User>,
+    };
+
+    entity Secret in [Environment] = {
+        "name": String,
+        "version": Long,
+        // Permission sets
+        "admins": Set<User>,
+        "members": Set<User>,
+        "viewers": Set<User>,
+    };
+
+    entity Deployment in [Environment] = {
+        "version": String,
+        "status": String,
+        "deployedBy": User,
+        "deployedAt": Long,
+        // Permission sets
+        "admins": Set<User>,
+        "members": Set<User>,
+        "viewers": Set<User>,
+    };
+
+    // ==========================================================================
+    // Organization Actions
+    // ==========================================================================
+
+    action "Organization::view" appliesTo {
+        principal: [User, ServiceAccount],
+        resource: Organization,
+    };
+
+    action "Organization::update" appliesTo {
+        principal: [User],
+        resource: Organization,
+    };
+
+    action "Organization::delete" appliesTo {
+        principal: [User],
+        resource: Organization,
+    };
+
+    action "Organization::manageBilling" appliesTo {
+        principal: [User],
+        resource: Organization,
+    };
+
+    action "Organization::manageMembers" appliesTo {
+        principal: [User],
+        resource: Organization,
+    };
+
+    action "Organization::createWorkspace" appliesTo {
+        principal: [User, ServiceAccount],
+        resource: Organization,
+    };
+
+    // ==========================================================================
+    // Workspace Actions
+    // ==========================================================================
+
+    action "Workspace::view" appliesTo {
+        principal: [User, ServiceAccount],
+        resource: Workspace,
+    };
+
+    action "Workspace::update" appliesTo {
+        principal: [User],
+        resource: Workspace,
+    };
+
+    action "Workspace::delete" appliesTo {
+        principal: [User],
+        resource: Workspace,
+    };
+
+    action "Workspace::manageMembers" appliesTo {
+        principal: [User],
+        resource: Workspace,
+    };
+
+    action "Workspace::createProject" appliesTo {
+        principal: [User, ServiceAccount],
+        resource: Workspace,
+    };
+
+    // ==========================================================================
+    // Project Actions
+    // ==========================================================================
+
+    action "Project::view" appliesTo {
+        principal: [User, ServiceAccount],
+        resource: Project,
+    };
+
+    action "Project::update" appliesTo {
+        principal: [User, ServiceAccount],
+        resource: Project,
+    };
+
+    action "Project::delete" appliesTo {
+        principal: [User],
+        resource: Project,
+    };
+
+    action "Project::archive" appliesTo {
+        principal: [User],
+        resource: Project,
+    };
+
+    action "Project::manageMembers" appliesTo {
+        principal: [User],
+        resource: Project,
+    };
+
+    // ==========================================================================
+    // Environment Actions
+    // ==========================================================================
+
+    action "Environment::view" appliesTo {
+        principal: [User, ServiceAccount],
+        resource: Environment,
+    };
+
+    action "Environment::create" appliesTo {
+        principal: [User, ServiceAccount],
+        resource: Project,
+    };
+
+    action "Environment::update" appliesTo {
+        principal: [User, ServiceAccount],
+        resource: Environment,
+    };
+
+    action "Environment::delete" appliesTo {
+        principal: [User],
+        resource: Environment,
+    };
+
+    // ==========================================================================
+    // Secret Actions
+    // ==========================================================================
+
+    action "Secret::view" appliesTo {
+        principal: [User, ServiceAccount],
+        resource: Secret,
+    };
+
+    action "Secret::create" appliesTo {
+        principal: [User, ServiceAccount],
+        resource: Environment,
+    };
+
+    action "Secret::update" appliesTo {
+        principal: [User, ServiceAccount],
+        resource: Secret,
+    };
+
+    action "Secret::delete" appliesTo {
+        principal: [User, ServiceAccount],
+        resource: Secret,
+    };
+
+    action "Secret::viewValue" appliesTo {
+        principal: [User, ServiceAccount],
+        resource: Secret,
+    };
+
+    // ==========================================================================
+    // Deployment Actions
+    // ==========================================================================
+
+    action "Deployment::view" appliesTo {
+        principal: [User, ServiceAccount],
+        resource: Deployment,
+    };
+
+    action "Deployment::create" appliesTo {
+        principal: [User, ServiceAccount],
+        resource: Environment,
+    };
+
+    action "Deployment::rollback" appliesTo {
+        principal: [User, ServiceAccount],
+        resource: Deployment,
+    };
+
+    action "Deployment::promote" appliesTo {
+        principal: [User, ServiceAccount],
+        resource: Deployment,
+    };
+}

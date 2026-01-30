@@ -1,0 +1,29 @@
+namespace PlayAuth {
+
+    entity Org = {};
+
+    entity User = {
+        "orgs": Set<Org>,
+    };
+
+    entity Document in [Org] = {
+        "owner": User,
+        "title": String,
+        "visibility": String,
+    };
+
+    action "Document::Read" appliesTo {
+        principal: [User],
+        resource: Document,
+    };
+
+    action "Document::Write" appliesTo {
+        principal: [User],
+        resource: Document,
+    };
+
+    action "Document::Create" appliesTo {
+        principal: [User],
+        resource: Org,
+    };
+}
