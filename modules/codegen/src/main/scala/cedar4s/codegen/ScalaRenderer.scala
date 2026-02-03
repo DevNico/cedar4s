@@ -656,11 +656,13 @@ $nestedClasses
     val idType = s"${entity.name}Id"
     val idField = s"    id: $idType"
 
-    // Parent ID fields (immediate parent only, as that's what we need to resolve hierarchy)
-    val parentFields = entity.immediateParent.map { parentName =>
-      val parentType = s"${parentName}Id" // Generated newtype
-      s"    ${parentName.take(1).toLowerCase + parentName.drop(1)}Id: $parentType"
-    }.toList
+    // Parent ID fields - generate Set[ParentId] for each direct parent type
+    // This supports entities with multiple parents of the same type (e.g., CustomerMembership in [Customer, Permission])
+    val parentFields = entity.directParents.map { dp =>
+      val parentIdType = s"${dp.entityType}Id" // Generated newtype
+      val fieldName = dp.entityType.take(1).toLowerCase + dp.entityType.drop(1) + "Ids"
+      s"    $fieldName: Set[$parentIdType]"
+    }
 
     // Attribute fields - for nested records, use the nested class name qualified with entity name
     val attrFields = entity.attributes.map { attr =>
@@ -681,15 +683,18 @@ $nestedClasses
     // All IDs are newtypes, so always use .value to extract string
     val idToStringExpr = ".value"
 
-    // Build parent set for Cedar entity
-    val parentSet = entity.immediateParent match {
-      case Some(parentName) =>
-        val parentType = s"$namespace::$parentName"
-        val parentIdField = parentName.take(1).toLowerCase + parentName.drop(1) + "Id"
-        val quote = '"'
-        s"Set(CedarEntityUid($quote$parentType$quote, a.$parentIdField.value))"
-      case None =>
-        "Set.empty"
+    // Build parent set for Cedar entity - combine all parent ID sets
+    val parentSet = if (entity.directParents.isEmpty) {
+      "Set.empty"
+    } else {
+      val quote = '"'
+      val parentSets = entity.directParents.map { dp =>
+        val parentType = s"$namespace::${dp.entityType}"
+        val fieldName = dp.entityType.take(1).toLowerCase + dp.entityType.drop(1) + "Ids"
+        s"a.$fieldName.map(id => CedarEntityUid($quote$parentType$quote, id.value))"
+      }
+      if (parentSets.size == 1) parentSets.head
+      else parentSets.mkString("(", " ++ ", ")")
     }
 
     // Build attribute map
@@ -704,15 +709,18 @@ $nestedClasses
       "Map.empty"
     }
 
-    // Build getParentIds
-    val parentExtraction = entity.immediateParent match {
-      case Some(parentName) =>
-        val parentType = s"$namespace::$parentName"
-        val parentIdField = parentName.take(1).toLowerCase + parentName.drop(1) + "Id"
-        val quote = '"'
-        s"List($quote$parentType$quote -> a.$parentIdField.value)"
-      case None =>
-        "Nil"
+    // Build getParentIds - extract all parent IDs from all parent ID sets
+    val parentExtraction = if (entity.directParents.isEmpty) {
+      "Nil"
+    } else {
+      val quote = '"'
+      val extractions = entity.directParents.map { dp =>
+        val parentType = s"$namespace::${dp.entityType}"
+        val fieldName = dp.entityType.take(1).toLowerCase + dp.entityType.drop(1) + "Ids"
+        s"a.$fieldName.toList.map(id => ($quote$parentType$quote, id.value))"
+      }
+      if (extractions.size == 1) extractions.head
+      else extractions.mkString("(", " ++ ", ")")
     }
 
     // Generate nested case classes for record attributes
@@ -1468,12 +1476,13 @@ $toMapEntries
     val entities = ir.entities.sortBy(e => (e.depth, e.name))
 
     // Build (child, parent) pairs from entity hierarchies
-    // Each entity in parentChain is a direct or transitive parent
+    // Each direct parent gets a "direct" relationship
+    // All ancestors in the parent chain get a "transitive" relationship
     val parentPairs = entities
       .flatMap { entity =>
-        // Direct parent is last in chain
-        entity.immediateParent.toList.map(parent => (entity.name, parent, "direct")) ++
-          // All ancestors are transitive parents
+        // All direct parents (from memberOf) get "direct" relationship
+        entity.directParents.map(dp => (entity.name, dp.entityType, "direct")) ++
+          // All ancestors in the hierarchical chain (except immediate parent) get "transitive" relationship
           entity.parentChain.dropRight(1).map(parent => (entity.name, parent, "transitive"))
       }
       .distinct
@@ -1931,11 +1940,13 @@ $fromStringCases
     val idType = s"${entity.name}Id"
     val idField = s"      id: $idType"
 
-    // Parent ID fields (immediate parent only, as that's what we need to resolve hierarchy)
-    val parentFields = entity.immediateParent.map { parentName =>
-      val parentType = s"${parentName}Id" // Generated newtype
-      s"      ${parentName.take(1).toLowerCase + parentName.drop(1)}Id: $parentType"
-    }.toList
+    // Parent ID fields - generate Set[ParentId] for each direct parent type
+    // This supports entities with multiple parents of the same type (e.g., CustomerMembership in [Customer, Permission])
+    val parentFields = entity.directParents.map { dp =>
+      val parentIdType = s"${dp.entityType}Id" // Generated newtype
+      val fieldName = dp.entityType.take(1).toLowerCase + dp.entityType.drop(1) + "Ids"
+      s"      $fieldName: Set[$parentIdType]"
+    }
 
     // Attribute fields - for nested records, use the nested class name qualified with entity name
     val attrFields = entity.attributes.map { attr =>
@@ -1959,15 +1970,18 @@ $fromStringCases
     // All IDs are newtypes, so always use .value to extract string
     val idToStringExpr = ".value"
 
-    // Build parent set for Cedar entity
-    val parentSet = entity.immediateParent match {
-      case Some(parentName) =>
-        val parentType = s"$namespace::$parentName"
-        val parentIdField = parentName.take(1).toLowerCase + parentName.drop(1) + "Id"
-        val quote = '"'
-        s"Set(CedarEntityUid($quote$parentType$quote, a.$parentIdField.value))"
-      case None =>
-        "Set.empty"
+    // Build parent set for Cedar entity - combine all parent ID sets
+    val parentSet = if (entity.directParents.isEmpty) {
+      "Set.empty"
+    } else {
+      val quote = '"'
+      val parentSets = entity.directParents.map { dp =>
+        val parentType = s"$namespace::${dp.entityType}"
+        val fieldName = dp.entityType.take(1).toLowerCase + dp.entityType.drop(1) + "Ids"
+        s"a.$fieldName.map(id => CedarEntityUid($quote$parentType$quote, id.value))"
+      }
+      if (parentSets.size == 1) parentSets.head
+      else parentSets.mkString("(", " ++ ", ")")
     }
 
     // Build attribute map
@@ -1982,15 +1996,18 @@ $fromStringCases
       "Map.empty"
     }
 
-    // Build getParentIds
-    val parentExtraction = entity.immediateParent match {
-      case Some(parentName) =>
-        val parentType = s"$namespace::$parentName"
-        val parentIdField = parentName.take(1).toLowerCase + parentName.drop(1) + "Id"
-        val quote = '"'
-        s"List($quote$parentType$quote -> a.$parentIdField.value)"
-      case None =>
-        "Nil"
+    // Build getParentIds - extract all parent IDs from all parent ID sets
+    val parentExtraction = if (entity.directParents.isEmpty) {
+      "Nil"
+    } else {
+      val quote = '"'
+      val extractions = entity.directParents.map { dp =>
+        val parentType = s"$namespace::${dp.entityType}"
+        val fieldName = dp.entityType.take(1).toLowerCase + dp.entityType.drop(1) + "Ids"
+        s"a.$fieldName.toList.map(id => ($quote$parentType$quote, id.value))"
+      }
+      if (extractions.size == 1) extractions.head
+      else extractions.mkString("(", " ++ ", ")")
     }
 
     // Generate nested case classes for record attributes

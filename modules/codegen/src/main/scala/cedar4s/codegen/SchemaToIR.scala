@@ -100,6 +100,18 @@ object SchemaToIR {
     // Determine ownership based on parent chain length
     val ownership = determineOwnership(name, parentChain)
 
+    // Get ALL direct parents from the hierarchy (supports multiple parent types)
+    val allDirectParents = hierarchy.parentsOf(name)
+    val hierarchicalParent = parentChain.lastOption
+
+    // Build DirectParentIR for each parent type, marking which is hierarchical
+    val directParents = allDirectParents.toList.sorted.map { parentType =>
+      DirectParentIR(
+        entityType = parentType,
+        isHierarchical = hierarchicalParent.contains(parentType)
+      )
+    }
+
     // Transform attributes
     val attributes = entity.attributes.map(attr => transformAttribute(attr, commonTypesByName))
 
@@ -107,6 +119,7 @@ object SchemaToIR {
       name = name,
       ownership = ownership,
       parentChain = parentChain,
+      directParents = directParents,
       attributes = attributes,
       enumValues = entity.enumValues,
       doc = entity.doc

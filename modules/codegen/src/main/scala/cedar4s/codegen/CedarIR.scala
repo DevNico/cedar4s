@@ -72,6 +72,18 @@ final case class CedarIR(
 // Entity IR
 // ============================================================================
 
+/** IR for a direct parent relationship.
+  *
+  * @param entityType
+  *   The parent entity type name (e.g., "Customer", "Permission")
+  * @param isHierarchical
+  *   True if this parent is part of the ownership hierarchy chain
+  */
+final case class DirectParentIR(
+    entityType: String,
+    isHierarchical: Boolean
+)
+
 /** IR for a single Cedar entity type.
   *
   * @param name
@@ -91,6 +103,7 @@ final case class EntityIR(
     name: String,
     ownership: OwnershipType,
     parentChain: List[String],
+    directParents: List[DirectParentIR] = Nil,
     attributes: List[AttributeIR] = Nil,
     enumValues: Option[List[String]] = None,
     doc: Option[String] = None
@@ -118,6 +131,13 @@ final case class EntityIR(
   /** Newtype name for this entity's ID. E.g., "Customer" -> "CustomerId"
     */
   def idTypeName: String = name + "Id"
+
+  /** Whether this entity has any direct parents */
+  def hasParents: Boolean = directParents.nonEmpty
+
+  /** Get non-hierarchical parent types (those not in the ownership chain) */
+  def nonHierarchicalParents: List[DirectParentIR] =
+    directParents.filterNot(_.isHierarchical)
 
   /** Scala-safe type name (escapes keywords) */
   def scalaName: String = ScalaKeywords.escape(name)

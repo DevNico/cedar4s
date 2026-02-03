@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-02-03
+
+### Added
+
+- **Codegen**: Support for entities with multiple parent types (e.g., `entity Membership in [Customer, Permission]`)
+  - Generates `Set[ParentId]` fields for each parent type (e.g., `customerIds: Set[CustomerId]`, `permissionIds: Set[PermissionId]`)
+  - `toCedarEntity` combines all parent ID sets into the Cedar entity's parent set
+  - `getParentIds` extracts parent IDs from all parent type sets
+  - `HasParentEvidence` includes evidence for all direct parent relationships
+
+### Changed
+
+- **Codegen**: Parent ID fields are now always `Set[ParentId]` instead of singular `ParentId`, enabling multiple parents of the same type
+
 ## [0.1.2] - 2026-02-03
 
 ### Changed
@@ -35,7 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SBT plugin for build-time code generation
 - Smithy integration (optional)
 
-[unreleased]: https://github.com/DevNico/cedar4s/compare/v0.1.2...HEAD
+[unreleased]: https://github.com/DevNico/cedar4s/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/DevNico/cedar4s/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/DevNico/cedar4s/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/DevNico/cedar4s/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/DevNico/cedar4s/releases/tag/v0.1.0

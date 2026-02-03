@@ -725,4 +725,129 @@ class CedarCodegenSpec extends FunSuite {
       "TypeRef to Set<String> should use string serialization"
     )
   }
+
+  // ===========================================================================
+  // Multi-Parent Entity Tests
+  // ===========================================================================
+
+  test("Multi-parent entity: SchemaToIR captures all direct parents") {
+    val schema = """
+      namespace Test {
+        entity Customer = { "name": String };
+        entity Permission = { };
+        entity Membership in [Customer, Permission] = { "roles": Set<String> };
+        entity User;
+        action "Membership::read" appliesTo {
+          principal: [User],
+          resource: [Membership],
+        };
+      }
+    """
+    val parsed = cedar4s.schema.CedarSchema.parseUnsafe(schema)
+    val ir = SchemaToIR.transform(parsed)
+
+    val membership = ir.entitiesByName("Membership")
+
+    // Should have both Customer and Permission as direct parents
+    assertEquals(membership.directParents.map(_.entityType).toSet, Set("Customer", "Permission"))
+
+    // Both should be marked appropriately
+    val customerParent = membership.directParents.find(_.entityType == "Customer").get
+    val permissionParent = membership.directParents.find(_.entityType == "Permission").get
+
+    // One is hierarchical (in the ownership chain), one is not
+    assert(
+      customerParent.isHierarchical || permissionParent.isHierarchical,
+      "At least one parent should be hierarchical"
+    )
+  }
+
+  test("Multi-parent entity: ScalaRenderer generates Set[ParentId] for each parent type") {
+    val schema = """
+      namespace Test {
+        entity Customer = { "name": String };
+        entity Permission = { };
+        entity Membership in [Customer, Permission] = { "roles": Set<String> };
+        entity User;
+        action "Membership::read" appliesTo {
+          principal: [User],
+          resource: [Membership],
+        };
+      }
+    """
+    val result = CedarCodegen.generateFromString(schema, "test.cedar")
+    val files = result.toOption.get
+
+    val dsl = files("Test.scala")
+
+    // Should generate Set[CustomerId] and Set[PermissionId] fields
+    assert(
+      dsl.contains("customerIds: Set[CustomerId]"),
+      s"Should have customerIds field with Set[CustomerId], but got: ${dsl.linesIterator.find(_.contains("customerIds")).getOrElse("not found")}"
+    )
+    assert(
+      dsl.contains("permissionIds: Set[PermissionId]"),
+      s"Should have permissionIds field with Set[PermissionId], but got: ${dsl.linesIterator.find(_.contains("permissionIds")).getOrElse("not found")}"
+    )
+
+    // Parent set construction should combine both
+    assert(
+      dsl.contains("++") || (dsl.contains("a.customerIds.map") && dsl.contains("a.permissionIds.map")),
+      "Should combine multiple parent ID sets in toCedarEntity"
+    )
+  }
+
+  test("Multi-parent entity: getParentIds extracts all parent types") {
+    val schema = """
+      namespace Test {
+        entity Customer = { "name": String };
+        entity Permission = { };
+        entity Membership in [Customer, Permission] = { "roles": Set<String> };
+        entity User;
+        action "Membership::read" appliesTo {
+          principal: [User],
+          resource: [Membership],
+        };
+      }
+    """
+    val result = CedarCodegen.generateFromString(schema, "test.cedar")
+    val files = result.toOption.get
+
+    val dsl = files("Test.scala")
+
+    // getParentIds should extract from both sets
+    assert(
+      dsl.contains(""""Test::Customer"""") && dsl.contains(""""Test::Permission""""),
+      "getParentIds should reference both parent entity types"
+    )
+  }
+
+  test("Multi-parent entity: HasParentEvidence includes all parent relationships") {
+    val schema = """
+      namespace Test {
+        entity Customer = { "name": String };
+        entity Permission = { };
+        entity Membership in [Customer, Permission] = { "roles": Set<String> };
+        entity User;
+        action "Membership::read" appliesTo {
+          principal: [User],
+          resource: [Membership],
+        };
+      }
+    """
+    val result = CedarCodegen.generateFromString(schema, "test.cedar")
+    val files = result.toOption.get
+
+    val evidence = files("HasParentEvidence.scala")
+
+    // Should have evidence for Membership -> Customer and Membership -> Permission
+    assert(
+      evidence.contains("Membership") && evidence.contains("Customer"),
+      "Should have HasParentEvidence for Membership -> Customer"
+    )
+    assert(
+      evidence.contains("Membership") && evidence.contains("Permission"),
+      "Should have HasParentEvidence for Membership -> Permission"
+    )
+  }
 }
