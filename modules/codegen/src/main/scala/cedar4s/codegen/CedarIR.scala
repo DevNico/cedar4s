@@ -224,8 +224,7 @@ final case class AttributeIR(
 
   /** Scala field name (camelCase, escaped if keyword).
     *
-    * Preserves existing camelCase in the first segment while handling hyphen/underscore
-    * separators. E.g.:
+    * Preserves existing camelCase in the first segment while handling hyphen/underscore separators. E.g.:
     *   - "firstName" -> "firstName" (preserved)
     *   - "first_name" -> "firstName" (converted to camelCase)
     *   - "first-name" -> "firstName" (converted to camelCase)

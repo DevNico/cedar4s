@@ -770,16 +770,20 @@ $nestedClasses
     val enumValues = entity.enumValues.getOrElse(Nil)
 
     // Generate enum cases - convert value to PascalCase for the case name
-    val cases = enumValues.map { value =>
-      val caseName = toPascalCaseEnum(value)
-      s"""    case $caseName extends $className("$value")"""
-    }.mkString("\n")
+    val cases = enumValues
+      .map { value =>
+        val caseName = toPascalCaseEnum(value)
+        s"""    case $caseName extends $className("$value")"""
+      }
+      .mkString("\n")
 
     // Generate fromString method for parsing
-    val fromStringCases = enumValues.map { value =>
-      val caseName = toPascalCaseEnum(value)
-      s"""      case "$value" => Some($caseName)"""
-    }.mkString("\n")
+    val fromStringCases = enumValues
+      .map { value =>
+        val caseName = toPascalCaseEnum(value)
+        s"""      case "$value" => Some($caseName)"""
+      }
+      .mkString("\n")
 
     s"""${doc}  enum $className(val value: String) {
 $cases
@@ -803,8 +807,8 @@ $fromStringCases
   }"""
   }
 
-  /** Convert a string to PascalCase for enum case names.
-    * E.g., "draft" -> "Draft", "in-progress" -> "InProgress", "PUBLISHED" -> "Published"
+  /** Convert a string to PascalCase for enum case names. E.g., "draft" -> "Draft", "in-progress" -> "InProgress",
+    * "PUBLISHED" -> "Published"
     */
   private def toPascalCaseEnum(value: String): String = {
     value.split("[-_]").map(_.toLowerCase.capitalize).mkString
@@ -1869,16 +1873,20 @@ $entityClasses
     val enumValues = entity.enumValues.getOrElse(Nil)
 
     // Generate enum cases - convert value to PascalCase for the case name
-    val cases = enumValues.map { value =>
-      val caseName = toPascalCaseEnum(value)
-      s"""      case $caseName extends $className("$value")"""
-    }.mkString("\n")
+    val cases = enumValues
+      .map { value =>
+        val caseName = toPascalCaseEnum(value)
+        s"""      case $caseName extends $className("$value")"""
+      }
+      .mkString("\n")
 
     // Generate fromString method for parsing
-    val fromStringCases = enumValues.map { value =>
-      val caseName = toPascalCaseEnum(value)
-      s"""        case "$value" => Some($caseName)"""
-    }.mkString("\n")
+    val fromStringCases = enumValues
+      .map { value =>
+        val caseName = toPascalCaseEnum(value)
+        s"""        case "$value" => Some($caseName)"""
+      }
+      .mkString("\n")
 
     s"""${doc}    enum $className(val value: String) {
 $cases

@@ -578,7 +578,7 @@ class CedarCodegenSpec extends FunSuite {
     assert(dsl.contains("firstName: String"), "firstName should be preserved as camelCase")
     assert(dsl.contains("lastName: String"), "lastName should be preserved as camelCase")
     assert(dsl.contains("emailAddress: String"), "emailAddress should be preserved as camelCase")
-    
+
     // Should NOT contain the broken lowercase versions
     assert(!dsl.contains("firstname:"), "Should not lowercase entire first part")
     assert(!dsl.contains("lastname:"), "Should not lowercase entire first part")
@@ -690,8 +690,10 @@ class CedarCodegenSpec extends FunSuite {
     assert(dsl.contains("roles:"), "Should have roles field")
     // The resolved type should generate entity serialization, not string conversion
     // Check that we're using entitySet for the entity reference
-    assert(dsl.contains(""""Test::Role"""") || dsl.contains("entitySet"), 
-           "TypeRef to entity should use entity serialization with entity type")
+    assert(
+      dsl.contains(""""Test::Role"""") || dsl.contains("entitySet"),
+      "TypeRef to entity should use entity serialization with entity type"
+    )
   }
 
   test("Bug fix: resolves nested TypeRef in Sets") {
@@ -715,7 +717,9 @@ class CedarCodegenSpec extends FunSuite {
     // Should handle TypeRef that resolves to Set<String>
     assert(dsl.contains("tags:"), "Should have tags field")
     // The resolved type should generate string set serialization
-    assert(dsl.contains("stringSet") || dsl.contains("CedarValue.string"), 
-           "TypeRef to Set<String> should use string serialization")
+    assert(
+      dsl.contains("stringSet") || dsl.contains("CedarValue.string"),
+      "TypeRef to Set<String> should use string serialization"
+    )
   }
 }
