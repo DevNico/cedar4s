@@ -61,8 +61,37 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Extract changelog for this release
+        id: changelog
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          # Extract content between ## [VERSION] and the next ## [ header
+          # Using awk for more reliable multi-line extraction
+          NOTES=$(awk -v ver="$VERSION" '
+            /^## \[/ { 
+              if (found) exit
+              if ($0 ~ "\\[" ver "\\]") found=1
+              next
+            }
+            found { print }
+          ' CHANGELOG.md)
+          
+          # If no changelog section found, use a default message
+          if [ -z "$NOTES" ]; then
+            NOTES="Release v$VERSION"
+          fi
+          
+          # Write to output using heredoc for multi-line support
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
-          generateReleaseNotes: true
+          body: ${{ steps.changelog.outputs.notes }}
           makeLatest: true
