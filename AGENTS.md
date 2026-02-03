@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AI coding agents when working with code in this repository.
 
 ## Project Overview
 
@@ -191,4 +191,3 @@ session.filterAllowed(documentIds)(id => Document.View.on(id))
 - [Cedar Documentation](https://www.cedarpolicy.com/)
 - [Project Documentation](https://devnico.github.io/cedar4s/)
 - Cedar-Java: [com.cedarpolicy:cedar-java](https://central.sonatype.com/artifact/com.cedarpolicy/cedar-java)
-
