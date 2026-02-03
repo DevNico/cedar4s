@@ -7,12 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Codegen**: Generate Scala 2/3 compatible sealed classes for Cedar enum entities (instead of Scala 3 enums) - works with Scala 2.12, 2.13, and 3.x
+
 ## [0.1.1] - 2026-02-03
 
 ### Fixed
 
 - **Codegen**: Preserve camelCase attribute names (e.g., `firstName` no longer becomes `firstname`)
-- **Codegen**: Generate Scala 3 enums for Cedar enum entities with `fromString`, `values`, and proper `EntityValue` integration
+- **Codegen**: Generate code for Cedar enum entities with `fromString`, `values`, and proper `EntityValue` integration
 - **Codegen**: Handle `SetOf` pattern match exhaustivity for nested sets
 
 ## [0.1.0] - 2026-01-31

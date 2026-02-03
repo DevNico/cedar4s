@@ -746,19 +746,26 @@ $nestedClasses
   }"""
   }
 
-  /** Render a Scala 3 enum for a Cedar enum entity.
+  /** Render a sealed abstract class for a Cedar enum entity.
+    *
+    * Generates Scala 2/3 compatible code using sealed abstract class + case objects, which works across all Scala
+    * versions (2.12, 2.13, 3.x).
     *
     * Cedar enum entities like:
     * {{{
     * entity Status enum ["draft", "published", "archived"];
     * }}}
     *
-    * Are rendered as Scala 3 enums:
+    * Are rendered as:
     * {{{
-    * enum Status(val value: String) {
-    *   case Draft extends Status("draft")
-    *   case Published extends Status("published")
-    *   case Archived extends Status("archived")
+    * sealed abstract class Status(val value: String) {
+    *   def toCedarEntityUid: CedarEntityUid = CedarEntityUid("Namespace::Status", value)
+    * }
+    * object Status {
+    *   case object Draft extends Status("draft")
+    *   case object Published extends Status("published")
+    *   case object Archived extends Status("archived")
+    *   // ...
     * }
     * }}}
     */
@@ -769,11 +776,11 @@ $nestedClasses
 
     val enumValues = entity.enumValues.getOrElse(Nil)
 
-    // Generate enum cases - convert value to PascalCase for the case name
-    val cases = enumValues
+    // Generate case objects - convert value to PascalCase for the case name
+    val caseObjects = enumValues
       .map { value =>
         val caseName = toPascalCaseEnum(value)
-        s"""    case $caseName extends $className("$value")"""
+        s"""    case object $caseName extends $className("$value")"""
       }
       .mkString("\n")
 
@@ -785,14 +792,14 @@ $nestedClasses
       }
       .mkString("\n")
 
-    s"""${doc}  enum $className(val value: String) {
-$cases
-
+    s"""${doc}  sealed abstract class $className(val value: String) {
     /** Convert to Cedar entity UID */
     def toCedarEntityUid: CedarEntityUid = CedarEntityUid("$fullEntityType", value)
   }
 
   object $className {
+$caseObjects
+
     /** Parse from string value */
     def fromString(s: String): Option[$className] = s match {
 $fromStringCases
@@ -1863,7 +1870,9 @@ $entityClasses
   }"""
   }
 
-  /** Render a Scala 3 enum entity for the DSL.
+  /** Render a sealed abstract class enum entity for the DSL.
+    *
+    * Generates Scala 2/3 compatible code using sealed abstract class + case objects.
     */
   private def renderEnumEntityForDsl(entity: EntityIR, namespace: String): String = {
     val className = escapeIdent(entity.name)
@@ -1872,11 +1881,11 @@ $entityClasses
 
     val enumValues = entity.enumValues.getOrElse(Nil)
 
-    // Generate enum cases - convert value to PascalCase for the case name
-    val cases = enumValues
+    // Generate case objects - convert value to PascalCase for the case name
+    val caseObjects = enumValues
       .map { value =>
         val caseName = toPascalCaseEnum(value)
-        s"""      case $caseName extends $className("$value")"""
+        s"""      case object $caseName extends $className("$value")"""
       }
       .mkString("\n")
 
@@ -1888,14 +1897,14 @@ $entityClasses
       }
       .mkString("\n")
 
-    s"""${doc}    enum $className(val value: String) {
-$cases
-
+    s"""${doc}    sealed abstract class $className(val value: String) {
       /** Convert to Cedar entity UID */
       def toCedarEntityUid: CedarEntityUid = CedarEntityUid("$fullEntityType", value)
     }
 
     object $className {
+$caseObjects
+
       /** Parse from string value */
       def fromString(s: String): Option[$className] = s match {
 $fromStringCases

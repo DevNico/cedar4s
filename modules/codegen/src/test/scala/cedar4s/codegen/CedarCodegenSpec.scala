@@ -644,7 +644,7 @@ class CedarCodegenSpec extends FunSuite {
   // Bug Fix Tests - Enum Entity Code Generation
   // ===========================================================================
 
-  test("Bug fix: generates Scala enum for Cedar enum entities") {
+  test("Bug fix: generates Scala 2/3 compatible sealed class for Cedar enum entities") {
     val schema = """
       namespace Test {
         entity Status enum ["draft", "published", "archived"];
@@ -659,12 +659,15 @@ class CedarCodegenSpec extends FunSuite {
     val files = result.toOption.get
 
     val dsl = files("Test.scala")
-    // Should generate an enum with the values
-    assert(dsl.contains("Status"), "Should contain Status type")
-    // The enum should have the values defined
-    assert(dsl.contains("draft") || dsl.contains("Draft"), "Should contain draft value")
-    assert(dsl.contains("published") || dsl.contains("Published"), "Should contain published value")
-    assert(dsl.contains("archived") || dsl.contains("Archived"), "Should contain archived value")
+    // Should generate a sealed abstract class (Scala 2/3 compatible, not Scala 3 enum)
+    assert(dsl.contains("sealed abstract class Status"), "Should use sealed abstract class for Scala 2 compatibility")
+    // Should generate case objects for each value
+    assert(dsl.contains("case object Draft extends Status"), "Should have Draft case object")
+    assert(dsl.contains("case object Published extends Status"), "Should have Published case object")
+    assert(dsl.contains("case object Archived extends Status"), "Should have Archived case object")
+    // Should have fromString and values helpers
+    assert(dsl.contains("def fromString"), "Should have fromString method")
+    assert(dsl.contains("val values: List[Status]"), "Should have values list")
   }
 
   // ===========================================================================
