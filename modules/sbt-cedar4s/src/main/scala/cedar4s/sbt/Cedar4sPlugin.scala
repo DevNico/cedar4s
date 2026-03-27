@@ -2,6 +2,7 @@ package cedar4s.sbt
 
 import sbt._
 import sbt.Keys._
+import sbt.util.FileFunction
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
@@ -72,61 +73,68 @@ object Cedar4sPlugin extends AutoPlugin {
       val smithyNs = cedarSmithyNamespace.value
       val smithyOut = cedarSmithyOutputDir.value
       val roots = cedarTenantRoots.value
+      val cacheDir = streams.value.cacheDirectory / "cedar4s"
 
       // Output Scala to managed sources (target/scala-X.Y.Z/src_managed/main)
       val scalaOutRoot = (Compile / sourceManaged).value
       val scalaOut = pkg.split("\\.").foldLeft(scalaOutRoot)(_ / _)
 
-      log.info(s"[cedar4s] Reading schema from $schemaFile")
-      log.info(s"[cedar4s] Generating Scala to $scalaOut")
-      smithyNs.foreach { ns =>
-        log.info(s"[cedar4s] Generating Smithy ($ns) to ${smithyOut.getOrElse("<not configured>")}")
-      }
-
       if (!schemaFile.exists()) {
         sys.error(s"Cedar schema not found at $schemaFile")
       }
 
-      // Build codegen args following smithy4s pattern
-      val args = CedarCodegenArgs(
-        input = CedarInput(
-          schemaFiles = List(schemaFile.toPath),
-          tenantRoots = roots
-        ),
-        scala = ScalaOutput(
-          outputDir = scalaOut.toPath,
-          packageName = pkg
-        ),
-        smithy = (smithyNs, smithyOut) match {
-          case (Some(ns), Some(dir)) =>
-            Some(
-              SmithyOutput(
-                outputDir = dir.toPath,
-                namespace = ns
-              )
-            )
-          case (Some(ns), None) =>
-            log.warn(
-              "[cedar4s] cedarSmithyNamespace is set but cedarSmithyOutputDir is not - Smithy generation disabled"
-            )
-            None
-          case _ =>
-            None
+      // Use sbt's FileFunction.cached to only regenerate when inputs change.
+      // Tracks schema file content hash — skips codegen entirely if unchanged.
+      val cachedCodegen = FileFunction.cached(cacheDir, FilesInfo.hash) { (_: Set[File]) =>
+        log.info(s"[cedar4s] Schema changed, regenerating code")
+        log.info(s"[cedar4s] Reading schema from $schemaFile")
+        log.info(s"[cedar4s] Generating Scala to $scalaOut")
+        smithyNs.foreach { ns =>
+          log.info(s"[cedar4s] Generating Smithy ($ns) to ${smithyOut.getOrElse("<not configured>")}")
         }
-      )
 
-      // Run code generation
-      CedarCodegen.runAndWrite(args) match {
-        case Right(paths) =>
-          log.info(s"[cedar4s] Generated ${paths.size} files")
-          paths.foreach(p => log.info(s"[cedar4s]   $p"))
+        // Build codegen args
+        val args = CedarCodegenArgs(
+          input = CedarInput(
+            schemaFiles = List(schemaFile.toPath),
+            tenantRoots = roots
+          ),
+          scala = ScalaOutput(
+            outputDir = scalaOut.toPath,
+            packageName = pkg
+          ),
+          smithy = (smithyNs, smithyOut) match {
+            case (Some(ns), Some(dir)) =>
+              Some(
+                SmithyOutput(
+                  outputDir = dir.toPath,
+                  namespace = ns
+                )
+              )
+            case (Some(ns), None) =>
+              log.warn(
+                "[cedar4s] cedarSmithyNamespace is set but cedarSmithyOutputDir is not - Smithy generation disabled"
+              )
+              None
+            case _ =>
+              None
+          }
+        )
 
-          // Return only Scala files for compilation (Smithy files are separate)
-          paths.filter(_.toString.endsWith(".scala")).map(_.toFile)
+        // Run code generation
+        CedarCodegen.runAndWrite(args) match {
+          case Right(paths) =>
+            log.info(s"[cedar4s] Generated ${paths.size} files")
+            paths.foreach(p => log.info(s"[cedar4s]   $p"))
+            paths.map(_.toFile).toSet
 
-        case Left(error) =>
-          sys.error(s"Cedar codegen failed: $error")
+          case Left(error) =>
+            sys.error(s"Cedar codegen failed: $error")
+        }
       }
+
+      val outputFiles = cachedCodegen(Set(schemaFile))
+      outputFiles.filter(_.getName.endsWith(".scala")).toSeq
     }
   )
 }
