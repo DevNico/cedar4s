@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: coursier/setup-action@v2
+      - uses: coursier/setup-action@v3
         with:
           apps: scalafmt
 
@@ -40,7 +40,7 @@ jobs:
 
       - uses: coursier/cache-action@v8
 
-      - uses: coursier/setup-action@v2
+      - uses: coursier/setup-action@v3
         with:
           jvm: temurin:${{ matrix.java }}
           apps: sbt
@@ -60,7 +60,7 @@ jobs:
 
       - uses: coursier/cache-action@v8
 
-      - uses: coursier/setup-action@v2
+      - uses: coursier/setup-action@v3
         with:
           jvm: temurin:21
           apps: sbt
