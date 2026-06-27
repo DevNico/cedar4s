@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-06-27
+
+### Fixed
+
+- **core**: Load resource parent ancestry for deferred authorization checks when only the resource ID is provided, including cached and batched entity stores
+
 ## [0.1.5] - 2026-03-27
 
 ### Changed
@@ -55,7 +61,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SBT plugin for build-time code generation
 - Smithy integration (optional)
 
-[unreleased]: https://github.com/DevNico/cedar4s/compare/v0.1.5...HEAD
+[unreleased]: https://github.com/DevNico/cedar4s/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/DevNico/cedar4s/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/DevNico/cedar4s/compare/v0.1.4...v0.1.5
 [0.1.3]: https://github.com/DevNico/cedar4s/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/DevNico/cedar4s/compare/v0.1.1...v0.1.2

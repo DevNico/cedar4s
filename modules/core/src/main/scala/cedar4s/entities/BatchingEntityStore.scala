@@ -56,7 +56,7 @@ class BatchingEntityStore(
 
   override def loadForBatch(principal: CedarPrincipal, resources: Seq[ResourceRef]): Future[CedarEntities] = {
     val allUids = resources.flatMap(r => r.uid.toList ++ r.parentUids).toSet
-    loadEntities(allUids).map(principal.entities ++ _)
+    loadEntitiesWithParentsRecursive(allUids).map(principal.entities ++ _)
   }
 
   override def loadEntity(entityType: String, entityId: String): Future[Option[CedarEntity]] = {
@@ -91,7 +91,26 @@ class BatchingEntityStore(
 
   private def loadResourceWithBatching(resource: ResourceRef): Future[CedarEntities] = {
     val uidsToLoad = resource.uid.toList ++ resource.parentUids
-    loadEntities(uidsToLoad.toSet)
+    loadEntitiesWithParentsRecursive(uidsToLoad.toSet)
+  }
+
+  private def loadEntitiesWithParentsRecursive(
+      uids: Set[CedarEntityUid],
+      visited: Set[CedarEntityUid] = Set.empty
+  ): Future[CedarEntities] = {
+    val toLoad = uids -- visited
+
+    if (toLoad.isEmpty) {
+      Future.successful(CedarEntities.empty)
+    } else {
+      loadEntities(toLoad).flatMap { loaded =>
+        val parentUids = loaded.entities.flatMap(_.parents)
+
+        loadEntitiesWithParentsRecursive(parentUids, visited ++ toLoad).map { parentEntities =>
+          loaded ++ parentEntities
+        }
+      }
+    }
   }
 
   private def loadWithBatching(uid: CedarEntityUid): Future[Option[CedarEntity]] = {

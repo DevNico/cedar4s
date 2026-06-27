@@ -288,7 +288,7 @@ class BaseEntityStore[F[_]](registry: EntityRegistry[F])(implicit F: Monad[F]) e
       r.uid.toList ++ r.parentUids
     }.toSet
 
-    F.map(loadEntities(allUids))(principal.entities ++ _)
+    F.map(loadEntitiesWithParentsRecursive(allUids))(principal.entities ++ _)
   }
 
   override def loadEntity(entityType: String, entityId: String): F[Option[CedarEntity]] = {
@@ -332,43 +332,28 @@ class BaseEntityStore[F[_]](registry: EntityRegistry[F])(implicit F: Monad[F]) e
   /** Load a resource and all its parent entities.
     */
   private def loadResourceWithParents(resource: ResourceRef): F[CedarEntities] = {
-    // Load the resource entity itself
-    val resourceF = resource.entityId match {
-      case Some(id) => loadEntity(resource.entityType, id)
-      case None     => F.pure(None)
-    }
-
-    // Load all parent entities recursively
-    val parentsF = F.traverse(resource.parents) { case (parentType, parentId) =>
-      loadEntityAndParentsRecursive(parentType, parentId)
-    }
-
-    F.flatMap(resourceF) { resourceOpt =>
-      F.map(parentsF) { parentEntitiesSeq =>
-        val resourceEntities = resourceOpt.map(e => CedarEntities(e)).getOrElse(CedarEntities.empty)
-        resourceEntities ++ parentEntitiesSeq.foldLeft(CedarEntities.empty)(_ ++ _)
-      }
-    }
+    val initialUids = (resource.uid.toList ++ resource.parentUids).toSet
+    loadEntitiesWithParentsRecursive(initialUids)
   }
 
-  /** Load an entity and recursively load its parents.
+  /** Load entities and recursively load parent entities discovered from their Cedar parent UIDs.
     */
-  private def loadEntityAndParentsRecursive(entityType: String, entityId: String): F[CedarEntities] = {
-    registry.get(entityType) match {
-      case Some(registered) =>
-        F.flatMap(registered.fetchWithParents(entityId)) {
-          case Some((entity, parentIds)) =>
-            // Recursively load parents
-            F.map(F.traverse(parentIds) { case (pType, pId) =>
-              loadEntityAndParentsRecursive(pType, pId)
-            }) { parentEntitiesList =>
-              CedarEntities(entity) ++ parentEntitiesList.foldLeft(CedarEntities.empty)(_ ++ _)
-            }
-          case None =>
-            F.pure(CedarEntities.empty)
+  private def loadEntitiesWithParentsRecursive(
+      uids: Set[CedarEntityUid],
+      visited: Set[CedarEntityUid] = Set.empty
+  ): F[CedarEntities] = {
+    val toLoad = uids -- visited
+
+    if (toLoad.isEmpty) {
+      F.pure(CedarEntities.empty)
+    } else {
+      F.flatMap(loadEntities(toLoad)) { loaded =>
+        val parentUids = loaded.entities.flatMap(_.parents)
+
+        F.map(loadEntitiesWithParentsRecursive(parentUids, visited ++ toLoad)) { parentEntities =>
+          loaded ++ parentEntities
         }
-      case None =>
-        F.pure(CedarEntities.empty)
+      }
     }
   }
 }

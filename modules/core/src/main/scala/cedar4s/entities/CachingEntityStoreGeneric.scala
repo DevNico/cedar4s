@@ -48,12 +48,12 @@ class CachingEntityStoreGeneric[F[_]](
 
   override def loadForRequest(principal: CedarPrincipal, resource: ResourceRef): F[CedarEntities] = {
     val uidsToLoad = resource.uid.toList ++ resource.parentUids
-    F.map(loadWithCache(uidsToLoad.toSet))(principal.entities ++ _)
+    F.map(loadWithCacheRecursive(uidsToLoad.toSet))(principal.entities ++ _)
   }
 
   override def loadForBatch(principal: CedarPrincipal, resources: Seq[ResourceRef]): F[CedarEntities] = {
     val allUids = resources.flatMap(r => r.uid.toList ++ r.parentUids).toSet
-    F.map(loadWithCache(allUids))(principal.entities ++ _)
+    F.map(loadWithCacheRecursive(allUids))(principal.entities ++ _)
   }
 
   override def loadEntity(entityType: String, entityId: String): F[Option[CedarEntity]] = {
@@ -162,6 +162,27 @@ class CachingEntityStoreGeneric[F[_]](
               CedarEntities.fromSet(cached.values.toSet) ++ loaded
             }
           }
+        }
+      }
+    }
+  }
+
+  /** Load entities with cache-first strategy, then recursively load parent entities discovered from loaded entities.
+    */
+  private def loadWithCacheRecursive(
+      uids: Set[CedarEntityUid],
+      visited: Set[CedarEntityUid] = Set.empty
+  ): F[CedarEntities] = {
+    val toLoad = uids -- visited
+
+    if (toLoad.isEmpty) {
+      F.pure(CedarEntities.empty)
+    } else {
+      F.flatMap(loadWithCache(toLoad)) { loaded =>
+        val parentUids = loaded.entities.flatMap(_.parents)
+
+        F.map(loadWithCacheRecursive(parentUids, visited ++ toLoad)) { parentEntities =>
+          loaded ++ parentEntities
         }
       }
     }

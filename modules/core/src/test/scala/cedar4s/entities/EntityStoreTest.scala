@@ -27,6 +27,7 @@ class EntityStoreTest extends FunSuite {
   // ===========================================================================
 
   case class TestUser(id: String, name: String, email: String)
+  case class TestCustomer(id: String, name: String)
 
   object TestUser {
     implicit val cedarEntityType: CedarEntityType.Aux[TestUser, String] = new CedarEntityType[TestUser] {
@@ -47,7 +48,23 @@ class EntityStoreTest extends FunSuite {
     }
   }
 
-  case class TestFolder(id: String, name: String, ownerId: String)
+  object TestCustomer {
+    implicit val cedarEntityType: CedarEntityType.Aux[TestCustomer, String] = new CedarEntityType[TestCustomer] {
+      type Id = String
+      val entityType: String = "Test::Customer"
+
+      def toCedarEntity(a: TestCustomer): CedarEntity = CedarEntity(
+        entityType = entityType,
+        entityId = a.id,
+        parents = Set.empty,
+        attributes = Map("name" -> CedarValue.string(a.name))
+      )
+
+      def getParentIds(a: TestCustomer): List[(String, String)] = Nil
+    }
+  }
+
+  case class TestFolder(id: String, name: String, ownerId: String, customerId: String = "customer-1")
 
   object TestFolder {
     implicit val cedarEntityType: CedarEntityType.Aux[TestFolder, String] = new CedarEntityType[TestFolder] {
@@ -57,14 +74,15 @@ class EntityStoreTest extends FunSuite {
       def toCedarEntity(a: TestFolder): CedarEntity = CedarEntity(
         entityType = entityType,
         entityId = a.id,
-        parents = Set.empty,
+        parents = Set(CedarEntityUid("Test::Customer", a.customerId)),
         attributes = Map(
           "name" -> CedarValue.string(a.name),
           "owner" -> CedarValue.entity("Test::User", a.ownerId)
         )
       )
 
-      def getParentIds(a: TestFolder): List[(String, String)] = Nil
+      def getParentIds(a: TestFolder): List[(String, String)] =
+        List("Test::Customer" -> a.customerId)
     }
   }
 
@@ -106,6 +124,15 @@ class EntityStoreTest extends FunSuite {
     }
   }
 
+  class TestCustomerFetcher(data: Map[String, TestCustomer]) extends EntityFetcher[Future, TestCustomer, String] {
+    var fetchCount = 0
+
+    def fetch(id: String): Future[Option[TestCustomer]] = {
+      fetchCount += 1
+      Future.successful(data.get(id))
+    }
+  }
+
   class TestFolderFetcher(data: Map[String, TestFolder]) extends EntityFetcher[Future, TestFolder, String] {
     var fetchCount = 0
 
@@ -131,6 +158,10 @@ class EntityStoreTest extends FunSuite {
   val users = Map(
     "alice" -> TestUser("alice", "Alice", "alice@example.com"),
     "bob" -> TestUser("bob", "Bob", "bob@example.com")
+  )
+
+  val customers = Map(
+    "customer-1" -> TestCustomer("customer-1", "Acme Security")
   )
 
   val folders = Map(
@@ -276,6 +307,20 @@ class EntityStoreTest extends FunSuite {
   // EntityStore.loadForRequest Tests
   // ===========================================================================
 
+  private def principalAlice: CedarPrincipal =
+    CedarPrincipal(
+      uid = CedarEntityUid("Test::User", "alice"),
+      entities = CedarEntities(
+        CedarEntity("Test::User", "alice", attributes = Map("name" -> CedarValue.string("Alice")))
+      )
+    )
+
+  private def assertContainsResourceHierarchy(result: CedarEntities): Unit = {
+    assert(result.find(CedarEntityUid("Test::Document", "doc-1")).isDefined, "Should have resource")
+    assert(result.find(CedarEntityUid("Test::Folder", "folder-1")).isDefined, "Should have direct parent")
+    assert(result.find(CedarEntityUid("Test::Customer", "customer-1")).isDefined, "Should have transitive parent")
+  }
+
   test("loadForRequest loads resource and merges with principal entities") {
     val userFetcher = new TestUserFetcher(users)
     val docFetcher = new TestDocumentFetcher(documents)
@@ -288,25 +333,95 @@ class EntityStoreTest extends FunSuite {
       .register(folderFetcher)
       .build()
 
-    val principal = CedarPrincipal(
-      uid = CedarEntityUid("Test::User", "alice"),
-      entities = CedarEntities(
-        CedarEntity("Test::User", "alice", attributes = Map("name" -> CedarValue.string("Alice")))
-      )
-    )
-
     val resource = ResourceRef(
       entityType = "Test::Document",
       entityId = Some("doc-1"),
       parents = List("Test::Folder" -> "folder-1")
     )
 
-    val result = await(store.loadForRequest(principal, resource))
+    val result = await(store.loadForRequest(principalAlice, resource))
 
     // Should contain: principal (alice), resource (doc-1), parent (folder-1)
     assert(result.find(CedarEntityUid("Test::User", "alice")).isDefined, "Should have principal")
     assert(result.find(CedarEntityUid("Test::Document", "doc-1")).isDefined, "Should have resource")
     assert(result.find(CedarEntityUid("Test::Folder", "folder-1")).isDefined, "Should have parent")
+  }
+
+  test("loadForRequest loads resource parent chain when only resource id is provided") {
+    val store = EntityStore
+      .builder[Future]()
+      .register(new TestCustomerFetcher(customers))
+      .register(new TestFolderFetcher(folders))
+      .register(new TestDocumentFetcher(documents))
+      .build()
+
+    val resource = ResourceRef(
+      entityType = "Test::Document",
+      entityId = Some("doc-1")
+    )
+
+    val result = await(store.loadForRequest(principalAlice, resource))
+
+    assertContainsResourceHierarchy(result)
+  }
+
+  test("loadForBatch loads resource parent chains when only resource ids are provided") {
+    val store = EntityStore
+      .builder[Future]()
+      .register(new TestCustomerFetcher(customers))
+      .register(new TestFolderFetcher(folders))
+      .register(new TestDocumentFetcher(documents))
+      .build()
+
+    val resources = Seq(
+      ResourceRef(entityType = "Test::Document", entityId = Some("doc-1"))
+    )
+
+    val result = await(store.loadForBatch(principalAlice, resources))
+
+    assertContainsResourceHierarchy(result)
+  }
+
+  test("cached loadForRequest loads resource parent chain when only resource id is provided") {
+    val store = EntityStore
+      .builder[Future]()
+      .register(new TestCustomerFetcher(customers))
+      .register(new TestFolderFetcher(folders))
+      .register(new TestDocumentFetcher(documents))
+      .withCache(EntityCache.none[Future])
+      .build()
+
+    val resource = ResourceRef(
+      entityType = "Test::Document",
+      entityId = Some("doc-1")
+    )
+
+    val result = await(store.loadForRequest(principalAlice, resource))
+
+    assertContainsResourceHierarchy(result)
+  }
+
+  test("batched loadForRequest loads resource parent chain when only resource id is provided") {
+    val underlying = EntityStore
+      .builder[Future]()
+      .register(new TestCustomerFetcher(customers))
+      .register(new TestFolderFetcher(folders))
+      .register(new TestDocumentFetcher(documents))
+      .build()
+    val store = new BatchingEntityStore(underlying, BatchConfig.disabled)
+
+    try {
+      val resource = ResourceRef(
+        entityType = "Test::Document",
+        entityId = Some("doc-1")
+      )
+
+      val result = await(store.loadForRequest(principalAlice, resource))
+
+      assertContainsResourceHierarchy(result)
+    } finally {
+      store.shutdown()
+    }
   }
 
   // ===========================================================================
