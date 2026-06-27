@@ -598,12 +598,12 @@ class CedarSessionRunnerTest extends FunSuite {
     override def loadEntity(entityType: String, entityId: String): Future[Option[CedarEntity]] =
       Future.successful(None)
     override def loadEntities(uids: Set[CedarEntityUid]): Future[CedarEntities] =
-        Future.successful(CedarEntities.empty)
+      Future.successful(CedarEntities.empty)
     override def loadEntityWithParents(
         entityType: String,
         entityId: String
     ): Future[Option[(CedarEntity, List[(String, String)])]] =
-        Future.successful(None)
+      Future.successful(None)
   }
 
   test("principal entity wins when store returns same UID with fewer attributes") {
